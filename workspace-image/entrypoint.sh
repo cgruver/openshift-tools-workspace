@@ -1,38 +1,17 @@
 #!/usr/bin/env bash
 
-# Create Home directory
+# If the user's home dir does not exist, then create it.  this allows for configurable locations for user home.
 if [ ! -d "${HOME}" ]
 then
   mkdir -p "${HOME}"
 fi
 
-# Create Podman configuration
-if [ ! -d "${HOME}/.config/containers" ]; then
-  mkdir -p ${HOME}/.config/containers
-  (echo 'unqualified-search-registries = [';echo '  "registry.access.redhat.com",';echo '  "registry.redhat.io",';echo '  "docker.io"'; echo ']'; echo 'short-name-mode = "permissive"') > ${HOME}/.config/containers/registries.conf
-  if [ -c "/dev/fuse" ] && [ -f "/usr/bin/fuse-overlayfs" ]; then
-    (echo '[storage]';echo 'driver = "overlay"';echo 'graphroot = "/tmp/graphroot"';echo '[storage.options.overlay]';echo 'mount_program = "/usr/bin/fuse-overlayfs"') > ${HOME}/.config/containers/storage.conf
-  else
-    (echo '[storage]';echo 'driver = "vfs"') > "${HOME}"/.config/containers/storage.conf
-  fi
-fi
-
-# Create User ID
-if ! whoami &> /dev/null
+# Configure the container runtime to use an ephemeral graphroot, and to use fuse-overlay instead of vfs.
+if [ ! -d "${HOME}/.config/containers" ]
 then
-  if [ -w /etc/passwd ]
-  then
-    echo "${USER_NAME:-user}:x:$(id -u):0:${USER_NAME:-user} user:${HOME}:/bin/bash" >> /etc/passwd
-    echo "${USER_NAME:-user}:x:$(id -u):" >> /etc/group
-  fi
+  mkdir -p ${HOME}/.config/containers
+  (echo '[storage]';echo 'driver = "overlay"';echo 'graphroot = "/tmp/graphroot"';echo '[storage.options.overlay]';echo 'mount_program = "/usr/bin/fuse-overlayfs"') > ${HOME}/.config/containers/storage.conf
 fi
-
-# Create subuid/gid entries for the user
-USER=$(whoami)
-START_ID=$(( $(id -u)+1 ))
-END_ID=$(( 65536-${START_ID} ))
-echo "${USER}:${START_ID}:${END_ID}" > /etc/subuid
-echo "${USER}:${START_ID}:${END_ID}" > /etc/subgid
 
 # Configure Z shell
 if [ ! -f ${HOME}/.zshrc ]
