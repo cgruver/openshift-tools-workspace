@@ -1,0 +1,81 @@
+schemaVersion: 2.2.0
+attributes:
+  controller.devfile.io/storage-type: per-workspace
+metadata:
+  name: openshift-tools-workspace
+components:
+- name: dev-tools
+  container:
+    image: quay.io/cgruver0/che/openshift-tools-workspace:latest
+    memoryLimit: 6Gi
+    memoryRequest: 1Gi
+    cpuLimit: "1"
+    cpuRequest: 100m
+    mountSources: true
+    env:
+    - name: SHELL
+      value: "/bin/zsh"
+    - name: HOME
+      value: "/projects/home"
+    - name: VSCODE_DEFAULT_WORKSPACE
+      value: "/projects/openshift-cli-workspace/devspaces.code-workspace"
+    - name: GOPATH
+      value: /projects/home/go
+- volume:
+    size: 20Gi
+  name: projects
+- name: prep-workspace
+  container:
+    args:
+      - '-c'
+      - >-
+        mkdir -p /projects/bin && cp /usr/bin/oc /projects/bin/oc && cp /usr/bin/kubectl /projects/bin/kubectl && if [[ -f ${HOME}/.kube/config ]]; then rm ${HOME}/.kube/config; fi
+    command:
+      - /bin/bash
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    mountSources: true
+    sourceMapping: /projects
+    memoryRequest: 128Mi
+    memoryLimit: 256Mi
+    cpuRequest: 10m
+    cpuLimit: 200m
+    env:
+    - name: HOME
+      value: "/projects/home"
+- name: restore-workspace
+  attributes:
+    container-overrides: 
+      securityContext:
+        procMount: Unmasked
+  container:
+    # image: quay.io/cgruver0/che/workspace-backup:latest
+    image: nexus.clg.lab:5002/dev-spaces/workspace-backup:latest
+    sourceMapping: /projects
+    command:
+      - /bin/bash
+    args:
+      - '-c'
+      - >-
+        set -x; set -e; if [[ -f ${PROJECTS_ROOT}/restore.workspace ]]; then /workspace-recovery.sh --restore; fi
+    memoryRequest: 128Mi
+    memoryLimit: 2Gi
+    cpuRequest: 10m
+    cpuLimit: "1"
+    env:
+      - name: REGISTRY_AUTH_FILE
+        value: /tmp/registry/auth.json
+      - name: DEVWORKSPACE_BACKUP_REGISTRY
+        value: nexus.clg.lab:5002/dev-spaces
+commands:
+- apply:
+    component: prep-workspace
+    label: Pre Start Prep
+  id: prep-workspace
+- apply:
+    component: restore-workspace
+    label: Restore Workspace
+  id: restore-workspace
+events:
+  preStart:
+    - restore-workspace
+    - prep-workspace
