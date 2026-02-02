@@ -18,7 +18,7 @@ components:
     - name: HOME
       value: "/projects/home"
     - name: VSCODE_DEFAULT_WORKSPACE
-      value: "/projects/openshift-cli-workspace/devspaces.code-workspace"
+      value: "/projects/openshift-tools-workspace/devspaces.code-workspace"
     - name: GOPATH
       value: /projects/home/go
 - volume:

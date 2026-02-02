@@ -9,6 +9,7 @@
 		"recommendations": [
 			"dbaeumer.vscode-eslint",
 			"redhat.vscode-yaml",
+			"redhat.vscode-openshift-connector",
 			"mhutchie.git-graph",
 			"eamodio.gitlens",
 			"streetsidesoftware.code-spell-checker",
